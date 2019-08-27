@@ -22,32 +22,50 @@ lis = makeTokenParser (emptyDef   { commentStart  = "/*"
                                   , opLetter      = char '='
                                   , reservedNames = ["true","false","if","then",
                                                      "else", "while"] 
-                                  , reservedOpNames = ["-", "+", "="]                   
+                                  , reservedOpNames = ["-", "+", "=","*", "/", "==", 
+                                                       "!=", "&&", "||", "<", ">", "!"]                   
                                   })
   
 ----------------------------------
 --- Parser de expressiones enteras
 -----------------------------------
 
+opParseTerm = do  { reservedOp lis "+" ; return (Plus) }
+              <|> do { reservedOp lis "-" ; return (Minus) }
+           
+opParseFactor = do  { reservedOp lis "*" ; return (Times) }
+                <|> do { reservedOp lis "/" ; return (Div) }
+ 
+negativParse :: Parser IntExp
+negativParse = do { reservedOp lis "-" 
+                  ; b <- factorParse
+                  ; return (UMinus b) }
+                  
+constParse :: Parser IntExp
+constParse  = do { f <- natural lis
+                 ; return (Const f) }
+
+varParse :: Parser IntExp
+varParse  = do x<- identifier lis
+               return (Var x)
+
+parenParse :: Parser IntExp
+parenParse  = do { symbol lis "("
+                 ; x <- intexp
+                 ; symbol lis ")"
+                 ; return x }
+
 intexp :: Parser IntExp
-intexp  = try (do x<- identifier lis
-                  return (Var x)) 
-          <|> try (do { a <- intexp 
-                       ; reservedOp lis "-"
-                       ; b <- intexp
-                       ; return (Minus a b)})
-          <|> do { n <- natural lis ; return (Const n)}
+intexp  = chainl1 termParse opParseTerm
+          
+termParse :: Parser IntExp
+termParse  = chainl1 factorParse opParseFactor
 
-
-            -- | Var Variable
-            -- | UMinus IntExp
-            -- | Plus IntExp IntExp
-            -- | Minus IntExp IntExp
-            -- | Times IntExp IntExp
-            -- | Div IntExp IntExp
-            -- | Assign Variable IntExp
-            -- | Secuence IntExp IntExp
- -- deriving Show
+factorParse :: Parser IntExp
+factorParse  = negativParse
+              <|> try constParse
+               <|> try varParse 
+               <|> parenParse
 
 
 
@@ -55,8 +73,40 @@ intexp  = try (do x<- identifier lis
 --- Parser de expressiones booleanas
 ------------------------------------
 
+boolPrimitive :: Parser BoolExp
+boolPrimitive  = do { f <- reserved lis "true"; return (BTrue) }
+                 <|> do { f <- reserved lis "false"; return (BFalse) }
+
+compOpParse = do  { reservedOp lis "==" ; return (Eq) }
+              <|> do { reservedOp lis "!=" ; return (NEq) }
+              <|> do { reservedOp lis "<" ; return (Lt) }
+              <|> do { reservedOp lis ">" ; return (Gt) }
+
+boolOpParse = do  { reservedOp lis "&&" ; return (And) }
+              <|> do { reservedOp lis "||" ; return (Or) }
+              
+negationParse :: Parser BoolExp
+negationParse  = do { reservedOp lis "!" 
+                    ; b <- boolexp  -- ACA FALTA UN EQUIVALENTE A FACTOR
+                    ; return (Not b) }
+
+
 boolexp :: Parser BoolExp
 boolexp = undefined
+
+
+
+-- ~ data BoolExp = BTrue
+             -- ~ | BFalse
+             -- ~ | Eq IntExp IntExp
+             -- ~ | NEq IntExp IntExp
+             -- ~ | Lt IntExp IntExp
+             -- ~ | Gt IntExp IntExp
+             -- ~ | And BoolExp BoolExp
+             -- ~ | Or BoolExp BoolExp
+             -- ~ | Not BoolExp
+ -- ~ deriving Show
+
 
 -----------------------------------
 --- Parser de comandos
