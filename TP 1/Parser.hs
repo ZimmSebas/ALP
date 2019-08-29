@@ -21,23 +21,31 @@ lis = makeTokenParser (emptyDef   { commentStart  = "/*"
                                   , commentLine   = "//"
                                   , opLetter      = char '='
                                   , reservedNames = ["true","false","if","then",
-                                                     "else", "while"] 
+                                                     "else", "while", "skip"] 
                                   , reservedOpNames = ["-", "+", "=","*", "/", "==", 
-                                                       "!=", "&&", "||", "<", ">", "!"]                   
+                                                       "!=", "&&", "||", "<", ">", "!", ";"]                   
                                   })
   
 ----------------------------------
---- Parser de expressiones enteras
+--- Common Parsers
 -----------------------------------
-
+parenParse  :: Parser p -> Parser p
+parenParse p = do { symbol lis "("
+                  ; x <- p
+                  ; symbol lis ")"
+                  ; return x }
+                  
+----------------------------------
+--- Parser de expressiones enteras
+-----------------------------------                  
 opParseTerm = do  { reservedOp lis "+" ; return (Plus) }
               <|> do { reservedOp lis "-" ; return (Minus) }
            
 opParseFactor = do  { reservedOp lis "*" ; return (Times) }
                 <|> do { reservedOp lis "/" ; return (Div) }
  
-negativParse :: Parser IntExp
-negativParse = do { reservedOp lis "-" 
+negativeParse :: Parser IntExp
+negativeParse = do { reservedOp lis "-" 
                   ; b <- factorParse
                   ; return (UMinus b) }
                   
@@ -49,12 +57,6 @@ varParse :: Parser IntExp
 varParse  = do x<- identifier lis
                return (Var x)
 
-parenParse :: Parser IntExp
-parenParse  = do { symbol lis "("
-                 ; x <- intexp
-                 ; symbol lis ")"
-                 ; return x }
-
 intexp :: Parser IntExp
 intexp  = chainl1 termParse opParseTerm
           
@@ -62,10 +64,10 @@ termParse :: Parser IntExp
 termParse  = chainl1 factorParse opParseFactor
 
 factorParse :: Parser IntExp
-factorParse  = negativParse
-              <|> try constParse
+factorParse  = negativeParse
+               <|> try constParse
                <|> try varParse 
-               <|> parenParse
+               <|> parenParse intexp
 
 
 
@@ -87,33 +89,46 @@ boolOpParse = do  { reservedOp lis "&&" ; return (And) }
               
 negationParse :: Parser BoolExp
 negationParse  = do { reservedOp lis "!" 
-                    ; b <- boolexp  -- ACA FALTA UN EQUIVALENTE A FACTOR
+                    ; b <- bTermParse  -- ACA FALTA UN EQUIVALENTE A FACTOR
                     ; return (Not b) }
+
+comparisonParse :: Parser BoolExp
+comparisonParse  = do { x <- intexp
+                      ; f <- compOpParse
+                      ; y <- intexp
+                      ; return (f x y)}
 
 
 boolexp :: Parser BoolExp
-boolexp = undefined
+boolexp  = chainl1 bTermParse boolOpParse
 
-
-
--- ~ data BoolExp = BTrue
-             -- ~ | BFalse
-             -- ~ | Eq IntExp IntExp
-             -- ~ | NEq IntExp IntExp
-             -- ~ | Lt IntExp IntExp
-             -- ~ | Gt IntExp IntExp
-             -- ~ | And BoolExp BoolExp
-             -- ~ | Or BoolExp BoolExp
-             -- ~ | Not BoolExp
- -- ~ deriving Show
-
+bTermParse :: Parser BoolExp
+bTermParse  = negationParse
+              <|> try boolPrimitive
+              <|> parenParse boolexp
+              <|> comparisonParse
 
 -----------------------------------
 --- Parser de comandos
 -----------------------------------
 
+dacParse  = do  { reservedOp lis ";" ; return (Seq) }
+
+commLine :: Parser Comm
+commLine  = do { reserved lis "skip" 
+               ; return (Skip)}
+
+
 comm :: Parser Comm
-comm = undefined
+comm = chainl1 commLine dacParse
+
+-- ~ data Comm = Skip
+          -- ~ | Let Variable IntExp
+          -- ~ | Seq Comm Comm
+          -- ~ | IfThenElse BoolExp Comm Comm
+          -- ~ | While BoolExp Comm 
+ -- ~ deriving Show
+
 
 ------------------------------------
 -- Función de parseo
