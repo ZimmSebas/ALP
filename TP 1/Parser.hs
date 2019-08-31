@@ -144,7 +144,7 @@ module Parser where
                   <|> return Skip}
   
   whileParse :: Parser Comm
-  whileParse  = do { reserved lis "where"
+  whileParse  = do { reserved lis "while"
                    ; cond <- boolexp
                    ; symbol lis "{"
                    ; cmd <- comm

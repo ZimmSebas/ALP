@@ -7,7 +7,7 @@ type State = [(Variable,Integer)]
 
 -- Estado nulo
 initState :: State
-initState = []
+initState = [("t",0),("n",0),("i",0)]
 
 -- Busca el valor de una variabl en un estado
 -- Completar la definicion
@@ -34,7 +34,8 @@ evalComm (IfThenElse b x y) s = case (evalBoolExp b s) of
                                   True      -> evalComm x s
                                   otherwise -> evalComm y s
 evalComm (While b c)        s = case (evalBoolExp b s) of
-                                 True      -> evalComm c s
+                                 True      -> let s' = evalComm c s
+                                               in evalComm (While b c) s'
                                  otherwise -> s
 
 --data Comm = Skip
