@@ -24,50 +24,56 @@ eval :: Comm -> State
 eval p = evalComm p initState
 
 -- Evalua un comando en un estado dado
--- Completar definicion
 evalComm :: Comm -> State -> State
 evalComm Skip               s = s
-evalComm (Let v i)          s = update v (evalIntExp i s) s
+evalComm (Let v i)          s = update v (fst $ evalIntExp i s) s
 evalComm (Seq x y)          s = let s' = evalComm x s
                                 in evalComm y s'
 evalComm (IfThenElse b x y) s = case (evalBoolExp b s) of
-                                  True      -> evalComm x s
-                                  otherwise -> evalComm y s
+                                  (True, s') -> evalComm x s'
+                                  (_ ,   s') -> evalComm y s'
 evalComm (While b c)        s = case (evalBoolExp b s) of
-                                 True      -> let s' = evalComm c s
-                                               in evalComm (While b c) s'
-                                 otherwise -> s
-
---data Comm = Skip
---          | Let Variable IntExp
---          | Seq Comm Comm
---          | IfThenElse BoolExp Comm Comm
---          | While BoolExp Comm 
--- deriving Show
+                                  (True, s') -> let s2 = evalComm c s'
+                                                in evalComm (While b c) s2
+                                  (_,    s') -> s'
  
--- Evalua una expresion entera, sin efectos laterales
--- Completar definicion
+-- Evalua una expresion entera, con efectos laterales
 
-evalIntExp :: IntExp -> State -> Integer
-evalIntExp (Const c)      _ = c
-evalIntExp (Var x)        s = lookfor x s
-evalIntExp (UMinus x)     s = (-1) * (evalIntExp x s)
-evalIntExp (Plus  x y)    s = (evalIntExp x s) + (evalIntExp y s)
-evalIntExp (Minus x y)    s = (evalIntExp x s) - (evalIntExp y s)
-evalIntExp (Times x y)    s = (evalIntExp x s) * (evalIntExp y s)
-evalIntExp (Div   x y)    s = div (evalIntExp x s) (evalIntExp y s)
-evalIntExp (Assign v i)   s = evalIntExp i s  
-evalIntExp (Secuence x y) s = evalIntExp y s
+binop :: (Integer -> Integer -> b) -> IntExp -> IntExp -> State -> (b, State) 
+binop f x y s = let (x', s1) = evalIntExp x s
+                    (y', s2) = evalIntExp y s1
+                in (f x' y' , s2)
 
--- Evalua una expresion entera, sin efectos laterales
--- Completar definicion
-evalBoolExp :: BoolExp -> State -> Bool
-evalBoolExp BTrue     _ = True
-evalBoolExp BFalse    _ = False
-evalBoolExp (Eq x y)  s = (evalIntExp x s) == (evalIntExp y s)
-evalBoolExp (NEq x y) s = (evalIntExp x s) /= (evalIntExp y s)
-evalBoolExp (Lt x y)  s = (evalIntExp x s) < (evalIntExp y s)
-evalBoolExp (Gt x y)  s = (evalIntExp x s) > (evalIntExp y s)
-evalBoolExp (And x y) s = (evalBoolExp x s) && (evalBoolExp y s)
-evalBoolExp (Or x y)  s = (evalBoolExp x s) || (evalBoolExp y s)
-evalBoolExp (Not x)   s = not (evalBoolExp x s)
+evalIntExp :: IntExp -> State -> (Integer, State)
+evalIntExp (Const c)      s = (c, s)
+evalIntExp (Var x)        s = (lookfor x s, s)
+evalIntExp (UMinus x)     s = binop (*) x (Const (-1)) s
+evalIntExp (Plus  x y)    s = binop (+) x y s
+evalIntExp (Minus x y)    s = binop (-) x y s
+evalIntExp (Times x y)    s = binop (*) x y s
+evalIntExp (Div   x y)    s = binop div x y s
+
+evalIntExp (Assign v i)   s = let (i' , s1) = evalIntExp i s
+                              in (i', update v i' s1)
+evalIntExp (Secuence x y) s = let (x', s') = evalIntExp x s
+                              in evalIntExp y s'
+
+
+-- Evalua una expresion booleana, con efectos laterales
+
+binopBool :: (Bool -> Bool -> b) -> BoolExp -> BoolExp -> State -> (b, State) 
+binopBool f x y s = let (x', s1) = evalBoolExp x s
+                        (y', s2) = evalBoolExp y s1
+                    in (f x' y' , s2)
+
+evalBoolExp :: BoolExp -> State -> (Bool, State)
+evalBoolExp BTrue     s = (True,s)
+evalBoolExp BFalse    s = (False,s)
+evalBoolExp (Eq x y)  s = binop (==) x y s
+evalBoolExp (NEq x y) s = binop (/=) x y s
+evalBoolExp (Lt x y)  s = binop (<) x y s
+evalBoolExp (Gt x y)  s = binop (>) x y s
+evalBoolExp (And x y) s = binopBool (&&) x y s
+evalBoolExp (Or x y)  s = binopBool (||) x y s
+evalBoolExp (Not x)   s = let (b, s') = (evalBoolExp x s)
+                          in (not b, s')
