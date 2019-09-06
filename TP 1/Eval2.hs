@@ -13,14 +13,12 @@ initState :: State
 initState = [("t",0),("n",0),("i",0),("a",0)]
 
 -- Busca el valor de una variabl en un estado
--- Completar la definicion
 lookfor :: Variable -> State -> Either Error Integer
 lookfor var state = let l = filter (\(v,i) -> v==var) state
                     in if (length l == 0) then Left UndefVar
                                           else Right $ snd $ head l
 
 -- Cambia el valor de una variable en un estado
--- Completar la definicion
 update :: Variable -> Integer -> State -> Either Error State
 update var int state = case (lookfor var state) of
         Right _   -> Right $ map (\(v,i) -> if (v == var) then (var, int) else (v,i)) state
@@ -31,7 +29,6 @@ eval :: Comm -> Either Error State
 eval p = evalComm p initState
 
 -- Evalua un comando en un estado dado
--- Completar definicion
 continue :: Comm -> Either Error State -> Either Error State
 continue cmd (Left err) = Left err
 continue cmd (Right s)  = evalComm cmd s
@@ -54,8 +51,6 @@ evalComm (While b c)        s = case (evalBoolExp b s) of
         Right (False, s') -> Right s'
 
 -- Evalua una expresion entera, con efectos laterales
--- Completar definicion
-
 binop :: (Integer -> Integer -> b) -> IntExp -> IntExp -> State -> Either Error (b, State) 
 binop f x y s = case (evalIntExp x s) of
         Left err       -> Left err
@@ -97,8 +92,6 @@ evalIntExp (Secuence x y) s = case (evalIntExp x s) of
         Right (x', s') -> evalIntExp y s'
         
 -- Evalua una expresion entera, sin efectos laterales
--- Completar definicion
-
 binopBool :: (Bool -> Bool -> b) -> BoolExp -> BoolExp -> State -> Either Error (b, State) 
 binopBool f x y s = case (evalBoolExp x s) of 
         Left err -> Left err
