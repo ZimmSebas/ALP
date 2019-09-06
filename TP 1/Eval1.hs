@@ -10,12 +10,10 @@ initState :: State
 initState = [("t",0),("n",0),("i",0)]
 
 -- Busca el valor de una variabl en un estado
--- Completar la definicion
 lookfor :: Variable -> State -> Integer
 lookfor var state = snd $ head $ filter (\(v,i) -> v==var) state
 
 -- Cambia el valor de una variable en un estado
--- Completar la definicion
 update :: Variable -> Integer -> State -> State
 update var int state = map (\(v,i) -> if (v == var) then (var, int) else (v,i)) state
 
