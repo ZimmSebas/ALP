@@ -16,14 +16,12 @@ initState :: State
 initState = [("t",0),("n",0),("i",0),("a",0)]
 
 -- Busca el valor de una variabl en un estado
--- Completar la definicion
 lookfor :: Variable -> State -> Either Error Integer
 lookfor var state = let l = filter (\(v,i) -> v==var) state
                     in if (length l == 0) then Left UndefVar
                                           else Right $ snd $ head l
 
 -- Cambia el valor de una variable en un estado
--- Completar la definicion
 update :: Variable -> Integer -> State -> Either Error State
 update var int state = case (lookfor var state) of
         Right _   -> Right $ map (\(v,i) -> if (v == var) then (var, int) else (v,i)) state
@@ -34,7 +32,6 @@ eval :: Comm -> Either Error (Work, State)
 eval p = evalComm p (0, initState)
 
 -- Evalua un comando en un estado dado
--- Completar definicion
 continue :: Comm -> Either Error (Work, State) -> Either Error (Work, State)
 continue cmd (Left err)     = Left err
 continue cmd (Right (w,s))  = evalComm cmd (w, s)
@@ -59,9 +56,7 @@ evalComm (While b c)        (w, s) = case (evalBoolExp b s) of
         Right (w', (True, s'))  -> continue (While b c) $ evalComm c (w+w', s')
         Right (w', (False, s')) -> Right (w+w', s')
 
--- Evalua una expresion entera, con efectos laterales
--- Completar definicion
-
+-- Evalua una expresion entera, con efectos laterales to-do
 binop :: (Integer -> Integer -> b) -> IntExp -> IntExp -> State -> Either Error (Work, (b, State))
 binop f x y s = case (evalIntExp x s) of
         Left err       -> Left err
@@ -113,9 +108,8 @@ evalIntExp (Secuence x y) s = case (evalIntExp x s) of
                                in calcwork w ret
                 where calcwork w1 (Left err)             = Left err
                       calcwork w1 (Right (w2, (x2, s2))) = Right (w1+w2,(x2, s2))
--- Evalua una expresion entera, sin efectos laterales
--- Completar definicion
-
+                      
+-- Evalua una expresion entera, con efectos laterales
 binopBool :: (Bool -> Bool -> b) -> BoolExp -> BoolExp -> State -> Either Error (Work, (b, State))
 binopBool f x y s = case (evalBoolExp x s) of 
         Left err -> Left err
