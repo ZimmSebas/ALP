@@ -41,29 +41,14 @@ def fact = Y (\f n. (is0 n) (suc zero) (mult n (f (pred n))))
 -- bottom
 def bottom = (\x . x x) (\x . x x)
 
--- not logico
-def not = \x. x false true
-
 -- menor o igual
 def le = Y (\f x y. (or (is0 x) (is0 y)) (or (is0 x) false) (f (pred x) (pred y)))
-
--- mayor o igual
-def ge = Y (\f x y. (or (is0 x) (is0 y)) (or (is0 y) false) (f (pred x) (pred y)))
-
--- menor estricto
-def lt = Y (\f x y. (or (is0 x) (is0 y)) (and (is0 x) (not (is0 y))) (f (pred x) (pred y)))
-
--- mayor estricto
-def gt = Y (\f x y. (or (is0 x) (is0 y)) (and (is0 y) (not (is0 x))) (f (pred x) (pred y)))
-
--- igual
-def eq = Y (\f x y. (or (is0 x) (is0 y)) (and (is0 x) (is0 y)) (f (pred x) (pred y)))
 
 -- sqrt
 def sqrt = \x. sqrtt x 0
 
 -- sqrt helper
-def sqrtt = Y (\f x n. (gt (pow2 (suc n)) x) (n) (f x (suc n)))
+def sqrtt = Y (\f x n. (le (pow2 (suc n)) x) (f x (suc n)) (n))
 
 -- potencia de dos
 def pow2 = \x. mult x x
