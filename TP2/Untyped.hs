@@ -66,7 +66,7 @@ eval' nvs t i = case t of
 
 evalFree :: NameEnv Term -> Name -> Int -> Term
 evalFree nvs x i = case (lookup x nvs) of
-     Just n    -> eval' nvs n i
+     Just n    -> eval' nvs (shift n 0 i) i
      otherwise -> Free x
 
 
