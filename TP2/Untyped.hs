@@ -42,19 +42,46 @@ subst t1 t2 i = subst' t1 t2 i 0
 
 subst' :: Term -> Term -> Int -> Int -> Term
 subst' t1 t2 i j = case t1 of
-    (Bound k) -> substBound k t2 i j
-    (v :@: u) -> (subst' v t2 i j) :@: (subst' u t2 i j)
-    (Lam t)   -> Lam (subst' t t2 i (j+1))
+    Free x  -> Free x
+    Bound k -> substBound k t2 i j
+    v :@: u -> (subst' v t2 i j) :@: (subst' u t2 i j)
+    Lam t   -> Lam (subst' t t2 i (j+1))
+   
 
 substBound :: Int -> Term -> Int -> Int -> Term
 substBound k t2 i j | k == i = shift t2 k j
                     | k >  i = Bound (k-1)
                     | k <  i = Bound k
 
+
 eval :: NameEnv Term -> Term -> Term
-eval = undefined
-    
-    
-    
-    
+eval nvs t = eval' nvs t 0
+
+eval' :: NameEnv Term -> Term -> Int -> Term
+eval' nvs t i = case t of
+     Free x    -> evalFree nvs x i
+     Bound k   -> Bound k
+     t1 :@: t2 -> evalApp nvs t1 t2 i
+     Lam t'    -> Lam $ eval' nvs t' (i+1)  
+
+evalFree :: NameEnv Term -> Name -> Int -> Term
+evalFree nvs x i = case (lookup x nvs) of
+     Just n    -> eval' nvs n i
+     otherwise -> Free x
+
+
+evalApp :: NameEnv Term -> Term -> Term -> Int -> Term
+evalApp nvs (Lam t) t2 i = eval' nvs (subst t t2 i) i -- <- SUPER DUDOSO 
+evalApp nvs t1      t2 i = let t  = eval' nvs t1 i 
+                           in case t of
+     Lam p     -> evalApp nvs t t2 i
+     otherwise -> t1 :@: eval' nvs t2 i  
+
+                                 
+
+
+
+
+
+
     

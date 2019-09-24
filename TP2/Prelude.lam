@@ -40,3 +40,12 @@ def fact = Y (\f n. (is0 n) (suc zero) (mult n (f (pred n))))
 
 -- bottom
 def bottom = (\x . x x) (\x . x x)
+
+-- menor
+-- def lt = Y (\f x y. (or (is0 x) (is0 y)) (x es zero o y es zero) ()    
+
+
+
+
+
+
