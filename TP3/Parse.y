@@ -141,7 +141,7 @@ lexer cont s = case s of
                                            ("suc",rest)  -> cont TSucc rest
                                            (var,rest)    -> cont (TVar var) rest
                           lexNat cs = let (n,rest) = span isDigit cs
-                                      in  cont (TNum (read(n)::Int) rest
+                                      in  cont (TNum (read(n)::Int)) rest
                           consumirBK anidado cl cont s = case s of
                                                           ('-':('-':cs)) -> consumirBK anidado cl cont $ dropWhile ((/=) '\n') cs
                                                           ('{':('-':cs)) -> consumirBK (anidado+1) cl cont cs 

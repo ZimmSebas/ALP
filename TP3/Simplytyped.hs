@@ -18,9 +18,12 @@ conversion :: LamTerm -> Term
 conversion = conversion' []
 
 conversion' :: [String] -> LamTerm -> Term
-conversion' b (LVar n)     = maybe (Free (Global n)) Bound (n `elemIndex` b)
-conversion' b (App t u)    = conversion' b t :@: conversion' b u
-conversion' b (Abs n t u)  = Lam t (conversion' (n:b) u)
+conversion' b (LVar n)       = maybe (Free (Global n)) Bound (n `elemIndex` b)
+conversion' b (App t u)      = conversion' b t :@: conversion' b u
+conversion' b (Abs n t u)    = Lam t (conversion' (n:b) u)
+conversion' b (LNum n)       = Num n
+conversion' b (Succ t)       = Suc $ conversion' b t
+conversion' b (Rec t1 t2 t3) = R (conversion' b t1) (conversion' b t2) (conversion' b t3) 
 
 -----------------------
 --- eval
@@ -32,6 +35,9 @@ sub _ _ (Bound j) | otherwise = Bound j
 sub _ _ (Free n)              = Free n
 sub i t (u :@: v)             = sub i t u :@: sub i t v
 sub i t (Lam t' u)            = Lam t' (sub (i+1) t u)
+sub i t (Num n)               = Num n
+sub i t (Suc n)               = Suc (sub i t n)
+sub i t (R t1 t2 t3)          = R (sub i t t1) (sub i t t2) (sub i t t3)
 
 -- evaluador de términos
 eval :: NameEnv Value Type -> Term -> Value
@@ -45,6 +51,17 @@ eval e (Lam t u :@: v)       = case eval e v of
 eval e (u :@: v)             = case eval e u of
                  VLam t u' -> eval e (Lam t u' :@: v)
                  _         -> error "Error de tipo en run-time, verificar type checker"
+eval e (Num n)               = VNum n
+eval e (Suc t)               = case eval e t of 
+                 VNum n    -> VNum (n + 1)
+                 _         -> error "Error de tipo en run-time, verificar type checker"
+eval e (R t1 t2 (Num n))     = case n of
+                 0         -> eval e t1
+                 _         -> eval e (t2 :@: (R t1 t2 $ Num (n-1)) :@: (Num (n-1))) 
+eval e (R t1 t2 t3)          = case eval e t3 of
+                 VNum n    -> eval e (R t1 t2 $ Num n)
+                 _         -> error "Error de tipo en run-time, verificar type checker"
+
 
 -----------------------
 --- quoting
@@ -99,4 +116,5 @@ infer' c e (t :@: u) = infer' c e t >>= \tt ->
                          _         -> notfunError tt
 infer' c e (Lam t u) = infer' (t:c) e u >>= \tu ->
                        ret $ Fun t tu
+-- todo 
 ----------------------------------

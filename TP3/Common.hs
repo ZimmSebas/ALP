@@ -36,6 +36,7 @@ module Common where
 
   -- Términos localmente sin nombres
   data Term  = Bound Int
+             | Num Int 
              | Free Name
              | Term :@: Term
              | Lam Type Term
@@ -45,7 +46,7 @@ module Common where
 
   -- Valores
   data Value = VLam Type Term
-             | VNum Type Int
+             | VNum Int
              | VUnit 
 
   -- Contextos del tipado

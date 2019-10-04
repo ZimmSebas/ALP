@@ -22,27 +22,37 @@ pp :: Int -> [String] -> Term -> Doc
 pp ii vs (Bound k)         = text (vs !! (ii - k - 1))
 pp _  _  (Free (Global s)) = text s
 
-pp ii vs (i :@: c) = sep [parensIf (isLam i) (pp ii vs i), 
-                          nest 1 (parensIf (isLam c || isApp c) (pp ii vs c))]  
+pp ii vs (i :@: c) = sep [parensIf (isAny i) (pp ii vs i), 
+                          nest 1 (parensIf (isLam c || isApp c || isRec c || isSuc c) (pp ii vs c))]  
 pp ii vs (Lam t c) = text "\\" <>
                      text (vs !! ii) <>
                      text ":" <>
                      printType t <>
                      text ". " <> 
                      pp (ii+1) vs c
-pp ii vs (Suc t)         = text "suc" <> pp ii vs t
-pp ii vs (R t1 t2 t3)  = text "rec" <> 
-                           pp ii vs t1 <>
-                           pp ii vs t2 <>
-                           pp ii vs t3
+pp ii vs (Suc t)         = text "suc " <> parensIf (isAny t) (pp ii vs t)
+pp ii vs (R t1 t2 t3)    = sep [text "rec", 
+                             parensIf (isAny t1) (pp ii vs t1),
+                             parensIf (isAny t2) (pp ii vs t2),
+                             parensIf (isAny t3) (pp ii vs t3)]
+pp ii vs (Num n)         = text $ show n
+
+isAny :: Term -> Bool
+isAny t = isLam t || isApp t || isRec t || isSuc t 
 
 isLam :: Term -> Bool                    
 isLam (Lam _ _) = True
-isLam  _      = False
+isLam  _        = False
 
 isApp :: Term -> Bool        
 isApp (_ :@: _) = True
-isApp _         = False                                                               
+isApp _         = False
+
+isSuc (Suc _)   = True
+isSuc _         = False
+
+isRec (R _ _ _) = True
+isRec _         = False
 
 -- pretty-printer de tipos
 printType :: Type -> Doc
@@ -57,10 +67,13 @@ isFun _                = False
 
 fv :: Term -> [String]
 fv (Bound _)         = []
+fv (Num _)           = [] 
 fv (Free (Global n)) = [n]
 fv (t :@: u)         = fv t ++ fv u
 fv (Lam _ u)         = fv u
-  
+fv (Suc t)           = fv t
+fv (R t1 t2 t3)      = fv t1 ++ fv t2 ++ fv t3
+
 ---
 printTerm :: Term -> Doc 
 printTerm t = pp 0 (filter (\v -> not $ elem v (fv t)) vars) t
