@@ -30,6 +30,11 @@ pp ii vs (Lam t c) = text "\\" <>
                      printType t <>
                      text ". " <> 
                      pp (ii+1) vs c
+pp ii vs (Suc t)         = text "suc" <> pp ii vs t
+pp ii vs (R t1 t2 t3)  = text "rec" <> 
+                           pp ii vs t1 <>
+                           pp ii vs t2 <>
+                           pp ii vs t3
 
 isLam :: Term -> Bool                    
 isLam (Lam _ _) = True
@@ -42,6 +47,7 @@ isApp _         = False
 -- pretty-printer de tipos
 printType :: Type -> Doc
 printType Base         = text "B"
+printType Nat          = text "Nat"
 printType (Fun t1 t2)  = sep [ parensIf (isFun t1) (printType t1), 
                                text "->", 
                                printType t2]

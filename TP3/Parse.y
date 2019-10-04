@@ -3,7 +3,6 @@ module Parse where
 import Common
 import Data.Maybe
 import Data.Char
-
 }
 
 %monad { P } { thenP } { returnP }
@@ -25,12 +24,19 @@ import Data.Char
     VAR     { TVar $$ }
     TYPE    { TType }
     DEF     { TDef }
+    NUM     { TNum $$ }
+    NAT     { TNat }
+    SUCC    { TSucc }
+    REC     { TRec }
     
-
+%right NAT
 %right VAR
 %left '=' 
 %right '->'
-%right '\\' '.' LET IN
+%right REC
+%right SUCC
+%right '\\' '.'
+
 
 %%
 
@@ -40,6 +46,8 @@ Defexp  : DEF VAR '=' Exp              { Def $2 $4 }
 
 Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { Abs $2 $4 $6 }
+        | SUCC Atom                    { Succ $2 }
+        | REC Atom Atom Exp            { Rec $2 $3 $4 }
         | NAbs                         { $1 }
         
 NAbs    :: { LamTerm }
@@ -48,9 +56,11 @@ NAbs    :: { LamTerm }
 
 Atom    :: { LamTerm }
         : VAR                          { LVar $1 }
+        | NUM                          { LNum $1 }
         | '(' Exp ')'                  { $2 }
 
 Type    : TYPE                         { Base }
+        | NAT                          { Nat }
         | Type '->' Type               { Fun $1 $3 }
         | '(' Type ')'                 { $2 }
 
@@ -97,6 +107,10 @@ data Token = TVar String
                | TArrow
                | TEquals
                | TEOF
+               | TNum Int
+               | TNat
+               | TSucc
+               | TRec
                deriving Show
 
 ----------------------------------
@@ -106,6 +120,7 @@ lexer cont s = case s of
                     (c:cs)
                           | isSpace c -> lexer cont cs
                           | isAlpha c -> lexVar (c:cs)
+                          | isDigit c -> lexVar (c:cs)
                     ('-':('-':cs)) -> lexer cont $ dropWhile ((/=) '\n') cs
                     ('{':('-':cs)) -> consumirBK 0 0 cont cs  
                     ('-':('}':cs)) -> \ line -> Failed $ "Línea "++(show line)++": Comentario no abierto"
@@ -119,9 +134,14 @@ lexer cont s = case s of
                     ('=':cs) -> cont TEquals cs
                     unknown -> \line -> Failed $ "Línea "++(show line)++": No se puede reconocer "++(show $ take 10 unknown)++ "..."
                     where lexVar cs = case span isAlpha cs of
-                                           ("B",rest)   -> cont TType rest
-                                           ("def",rest) -> cont TDef rest
-                                           (var,rest)   -> cont (TVar var) rest
+                                           ("B",rest)    -> cont TType rest
+                                           ("Nat",rest)  -> cont TNat rest
+                                           ("def",rest)  -> cont TDef rest
+                                           ("rec",rest)  -> cont TRec rest
+                                           ("suc",rest)  -> cont TSucc rest
+                                           (var,rest)    -> cont (TVar var) rest
+                          lexNat cs = let (n,rest) = span isDigit cs
+                                      in  cont (TNum (read(n)::Int) rest
                           consumirBK anidado cl cont s = case s of
                                                           ('-':('-':cs)) -> consumirBK anidado cl cont $ dropWhile ((/=) '\n') cs
                                                           ('{':('-':cs)) -> consumirBK (anidado+1) cl cont cs 
