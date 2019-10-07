@@ -47,6 +47,7 @@ eval _ (Lam t u)             = VLam t u
 eval e (Lam _ u :@: Lam s v) = eval e (sub 0 (Lam s v) u)
 eval e (Lam t u :@: v)       = case eval e v of
                  VLam t' u' -> eval e (Lam t u :@: Lam t' u')
+                 VNum n     -> eval e (sub 0 (Num n) u)
                  _          -> error "Error de tipo en run-time, verificar type checker"
 eval e (u :@: v)             = case eval e u of
                  VLam t u' -> eval e (Lam t u' :@: v)
@@ -69,6 +70,7 @@ eval e (R t1 t2 t3)          = case eval e t3 of
 
 quote :: Value -> Term
 quote (VLam t f) = Lam t f
+quote (VNum n)   = Num n
 
 ----------------------
 --- type checker
@@ -96,6 +98,13 @@ matchError t1 t2 = err $ "se esperaba " ++
                          render (printType t2) ++
                          " fue inferido."
 
+funmatchError :: Type -> Type -> Either String Type
+funmatchError t1 t2 = err $ "se esperaba " ++
+                         render (printType (Fun t1 (Fun Nat t1))) ++
+                         ", pero " ++
+                         render (printType t2) ++
+                         " fue inferido."
+
 notfunError :: Type -> Either String Type
 notfunError t1 = err $ render (printType t1) ++ " no puede ser aplicado."
 
@@ -116,5 +125,20 @@ infer' c e (t :@: u) = infer' c e t >>= \tt ->
                          _         -> notfunError tt
 infer' c e (Lam t u) = infer' (t:c) e u >>= \tu ->
                        ret $ Fun t tu
--- todo 
-----------------------------------
+infer' c e (Num n)   = Right Nat
+infer' c e (Suc t)   = infer' c e t >>= \tt ->
+                       case tt of
+                         Nat -> ret Nat
+                         t1  -> matchError Nat t1
+infer' c e (R t1 t2 t3) = infer' c e t1 >>= \tt1 -> 
+                          infer' c e t2 >>= \tt2 ->
+                          infer' c e t3 >>= \tt3 ->
+                          case tt2 of
+                            Fun t (Fun Nat t') -> 
+                              if (tt1 /= t || tt1 /= t')
+                                then funmatchError tt1 tt2
+                                else if (tt3 /= Nat) 
+                                  then matchError Nat tt3
+                                  else ret t
+                            Fun t errtype     -> funmatchError tt1 tt2
+                            _                 -> notfunError tt2

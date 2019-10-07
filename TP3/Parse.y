@@ -120,7 +120,7 @@ lexer cont s = case s of
                     (c:cs)
                           | isSpace c -> lexer cont cs
                           | isAlpha c -> lexVar (c:cs)
-                          | isDigit c -> lexVar (c:cs)
+                          | isDigit c -> lexNat (c:cs)
                     ('-':('-':cs)) -> lexer cont $ dropWhile ((/=) '\n') cs
                     ('{':('-':cs)) -> consumirBK 0 0 cont cs  
                     ('-':('}':cs)) -> \ line -> Failed $ "Línea "++(show line)++": Comentario no abierto"
