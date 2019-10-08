@@ -1,0 +1,4 @@
+def snd  = \x:Nat. \y:Nat. y
+def succ = \n:Nat. suc n
+def pred = \x:Nat. rec 0 snd x
+def ack  = \m:Nat. rec succ (\f:Nat->Nat. \p:Nat. \n:Nat. rec (f 1) (\r:Nat. \q:Nat. f r) n) m
