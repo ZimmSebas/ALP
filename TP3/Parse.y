@@ -32,9 +32,11 @@ import Data.Char
     NIL     { TNil }
     CONS    { TCons }
     RECL    { TRecl }
-{ -- TODO: Agregar tokens para "[", "]" y "," }
+    '['     { TSOpen }
+    ']'     { TSClose }
+    ','     { TComma }
 
-    
+
 %right NAT
 %right VAR
 %right LNAT
@@ -56,8 +58,8 @@ Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { Abs $2 $4 $6 }
         | SUCC Atom                    { Succ $2 }
         | REC Atom Atom Exp            { Rec $2 $3 $4 }
-        | CONS Atom Exp                { TCons $2 $3 }
-        | RECL Atom Atom Exp           { TRecl $2 $3 $4 }
+        | CONS Atom Exp                { Cons $2 $3 }
+        | RECL Atom Atom Exp           { RecL $2 $3 $4 }
         | NAbs                         { $1 }
         
 NAbs    :: { LamTerm }
@@ -67,8 +69,13 @@ NAbs    :: { LamTerm }
 Atom    :: { LamTerm }
         : VAR                          { LVar $1 }
         | NUM                          { LNum $1 }
-        | NIL                          { LNil $1 }
+        | NIL                          { LNil }
         | '(' Exp ')'                  { $2 }
+        | '[' List ']'                 { $2 }
+
+List    :: { LamTerm }
+        : Atom                         { Cons $1 LNil }
+        | Atom ',' List                { Cons $1 $3 }
 
 Type    : TYPE                         { Base }
         | NAT                          { Nat }
@@ -127,6 +134,9 @@ data Token = TVar String
                | TCons
                | TRecl
                | TLNat
+               | TComma
+               | TSOpen
+               | TSClose
                deriving Show
 
 ----------------------------------
@@ -143,6 +153,9 @@ lexer cont s = case s of
                     ('-':('>':cs)) -> cont TArrow cs
                     ('\\':cs)-> cont TAbs cs
                     ('.':cs) -> cont TDot cs
+                    ('[':cs) -> cont TSOpen cs
+                    (']':cs) -> cont TSClose cs
+                    (',':cs) -> cont TComma cs
                     ('(':cs) -> cont TOpen cs
                     ('-':('>':cs)) -> cont TArrow cs
                     (')':cs) -> cont TClose cs
@@ -151,10 +164,14 @@ lexer cont s = case s of
                     unknown -> \line -> Failed $ "Línea "++(show line)++": No se puede reconocer "++(show $ take 10 unknown)++ "..."
                     where lexVar cs = case span isAlpha cs of
                                            ("B",rest)    -> cont TType rest
+                                           ("LN",rest)   -> cont TLNat rest
                                            ("Nat",rest)  -> cont TNat rest
                                            ("def",rest)  -> cont TDef rest
                                            ("rec",rest)  -> cont TRec rest
                                            ("suc",rest)  -> cont TSucc rest
+                                           ("cons",rest) -> cont TCons rest
+                                           ("lrec",rest) -> cont TRecl rest
+                                           ("nil",rest)  -> cont TNil rest
                                            (var,rest)    -> cont (TVar var) rest
                           lexNat cs = let (n,rest) = span isDigit cs
                                       in  cont (TNum (read(n)::Int)) rest

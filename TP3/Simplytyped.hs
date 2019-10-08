@@ -18,12 +18,15 @@ conversion :: LamTerm -> Term
 conversion = conversion' []
 
 conversion' :: [String] -> LamTerm -> Term
-conversion' b (LVar n)       = maybe (Free (Global n)) Bound (n `elemIndex` b)
-conversion' b (App t u)      = conversion' b t :@: conversion' b u
-conversion' b (Abs n t u)    = Lam t (conversion' (n:b) u)
-conversion' b (LNum n)       = Num n
-conversion' b (Succ t)       = Suc $ conversion' b t
-conversion' b (Rec t1 t2 t3) = R (conversion' b t1) (conversion' b t2) (conversion' b t3) 
+conversion' b (LVar n)        = maybe (Free (Global n)) Bound (n `elemIndex` b)
+conversion' b (App t u)       = conversion' b t :@: conversion' b u
+conversion' b (Abs n t u)     = Lam t (conversion' (n:b) u)
+conversion' b (LNum n)        = Num n
+conversion' b (Succ t)        = Suc $ conversion' b t
+conversion' b (Rec t1 t2 t3)  = R (conversion' b t1) (conversion' b t2) (conversion' b t3) 
+conversion' b (LNil)          = Nill
+conversion' b (Cons x xs)     = Con (conversion' b x) (conversion' b xs)
+conversion' b (RecL t1 t2 t3) = RL (conversion' b t1) (conversion' b t2) (conversion' b t3)
 
 -----------------------
 --- eval
@@ -35,9 +38,12 @@ sub _ _ (Bound j) | otherwise = Bound j
 sub _ _ (Free n)              = Free n
 sub i t (u :@: v)             = sub i t u :@: sub i t v
 sub i t (Lam t' u)            = Lam t' (sub (i+1) t u)
-sub i t (Num n)               = Num n
+sub _ _ (Num n)               = Num n
 sub i t (Suc n)               = Suc (sub i t n)
 sub i t (R t1 t2 t3)          = R (sub i t t1) (sub i t t2) (sub i t t3)
+sub _ _ (Nill)                = Nill
+sub i t (Con x xs)            = Con (sub i t x) (sub i t xs)
+sub i t (RL t1 t2 t3)         = RL (sub i t t1) (sub i t t2) (sub i t t3)
 
 -- evaluador de términos
 eval :: NameEnv Value Type -> Term -> Value
@@ -62,15 +68,28 @@ eval e (R t1 t2 (Num n))     = case n of
 eval e (R t1 t2 t3)          = case eval e t3 of
                  VNum n    -> eval e (R t1 t2 $ Num n)
                  _         -> error "Error de tipo en run-time, verificar type checker"
+eval e (Nill)                = VL VNil
+eval e (Con x xs)            = VL $ (eval' e (Con x xs))
+eval e (RL t1 t2 (Nill))     = eval e t1
+eval e (RL t1 t2 (Con x xs)) = eval e (t2 :@: x :@: xs :@: (RL t1 t2 xs))
+eval e (RL t1 t2 t3)         = case quote $ eval e t3 of
+                 Nill      -> eval e t1
+                 Con x xs  -> eval e (t2 :@: x :@: xs :@: (RL t1 t2 Nill))
+                 _               -> error "Error de tipo en run-time, verificar type checker"
 
+eval' e (Nill)               = VNil
+eval' e (Con x xs)           = VCons (eval e x) (eval' e xs)
+eval' e _                    = error "Error de tipo en run-time, verificar type checker"
 
 -----------------------
 --- quoting
 -----------------------
 
 quote :: Value -> Term
-quote (VLam t f) = Lam t f
-quote (VNum n)   = Num n
+quote (VLam t f)        = Lam t f
+quote (VNum n)          = Num n
+quote (VL VNil)         = Nill
+quote (VL (VCons x xs)) = Con (quote x) (quote $ VL xs)
 
 ----------------------
 --- type checker

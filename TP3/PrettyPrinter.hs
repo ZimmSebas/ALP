@@ -36,6 +36,18 @@ pp ii vs (R t1 t2 t3)    = sep [text "rec",
                              parensIf (isAny t2) (pp ii vs t2),
                              parensIf (isAny t3) (pp ii vs t3)]
 pp ii vs (Num n)         = text $ show n
+pp ii vs (Nill)          = text "[]"
+pp ii vs (Con x xs)      = text "[" <>
+                           pp' ii vs (Con x xs) <>
+                           text "]"
+pp ii vs (RL t1 t2 t3)   = sep [text "recl",
+                             parensIf (isAny t1) (pp ii vs t1),
+                             parensIf (isAny t2) (pp ii vs t2),
+                             parensIf (isAny t3) (pp ii vs t3)]
+
+pp' ii vs (Nill)         = text ""
+pp' ii vs (Con x Nill)   = text $ show x
+pp' ii vs (Con x xs)     = text (show x) <> text "," <> (pp' ii vs xs)
 
 isAny :: Term -> Bool
 isAny t = isLam t || isApp t || isRec t || isSuc t 
@@ -58,6 +70,7 @@ isRec _         = False
 printType :: Type -> Doc
 printType Base         = text "B"
 printType Nat          = text "Nat"
+printType ListNat      = text "[Nat]"
 printType (Fun t1 t2)  = sep [ parensIf (isFun t1) (printType t1), 
                                text "->", 
                                printType t2]
@@ -72,7 +85,10 @@ fv (Free (Global n)) = [n]
 fv (t :@: u)         = fv t ++ fv u
 fv (Lam _ u)         = fv u
 fv (Suc t)           = fv t
+fv (Nill)            = []
+fv (Con _ _)         = []
 fv (R t1 t2 t3)      = fv t1 ++ fv t2 ++ fv t3
+fv (RL t1 t2 t3)     = fv t1 ++ fv t2 ++ fv t3
 
 ---
 printTerm :: Term -> Doc 
