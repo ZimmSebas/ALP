@@ -28,13 +28,21 @@ import Data.Char
     NAT     { TNat }
     SUCC    { TSucc }
     REC     { TRec }
+    LNAT    { TLNat }
+    NIL     { TNil }
+    CONS    { TCons }
+    RECL    { TRecl }
+{ -- TODO: Agregar tokens para "[", "]" y "," }
+
     
 %right NAT
 %right VAR
+%right LNAT
 %left '=' 
 %right '->'
-%right REC
-%right SUCC
+%right REC RECL
+%right SUCC 
+%right CONS
 %right '\\' '.'
 
 
@@ -48,6 +56,8 @@ Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { Abs $2 $4 $6 }
         | SUCC Atom                    { Succ $2 }
         | REC Atom Atom Exp            { Rec $2 $3 $4 }
+        | CONS Atom Exp                { TCons $2 $3 }
+        | RECL Atom Atom Exp           { TRecl $2 $3 $4 }
         | NAbs                         { $1 }
         
 NAbs    :: { LamTerm }
@@ -57,10 +67,12 @@ NAbs    :: { LamTerm }
 Atom    :: { LamTerm }
         : VAR                          { LVar $1 }
         | NUM                          { LNum $1 }
+        | NIL                          { LNil $1 }
         | '(' Exp ')'                  { $2 }
 
 Type    : TYPE                         { Base }
         | NAT                          { Nat }
+        | LNAT                         { ListNat }
         | Type '->' Type               { Fun $1 $3 }
         | '(' Type ')'                 { $2 }
 
@@ -111,6 +123,10 @@ data Token = TVar String
                | TNat
                | TSucc
                | TRec
+               | TNil
+               | TCons
+               | TRecl
+               | TLNat
                deriving Show
 
 ----------------------------------

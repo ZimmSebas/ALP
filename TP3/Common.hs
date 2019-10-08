@@ -21,33 +21,44 @@ module Common where
   data Type = Base 
             | Nat
             | Fun Type Type
+            | ListNat
 
             deriving (Show, Eq)
   
   -- Términos con nombres
   data LamTerm  =  LVar String
                 |  LNum Int 
-                |  Abs String Type LamTerm
-                |  App LamTerm LamTerm
+                |  Abs  String Type LamTerm
+                |  App  LamTerm LamTerm
                 |  Succ LamTerm
-                |  Rec LamTerm LamTerm LamTerm
+                |  Rec  LamTerm LamTerm LamTerm
+                |  LNil
+                |  Cons LamTerm LamTerm
+                |  RecL LamTerm LamTerm LamTerm
                 deriving (Show, Eq)
 
 
   -- Términos localmente sin nombres
   data Term  = Bound Int
-             | Num Int 
-             | Free Name
-             | Term :@: Term
-             | Lam Type Term
-             | Suc Term
-             | R Term Term Term
+             | Num   Int 
+             | Free  Name
+             | Term  :@: Term
+             | Lam   Type Term
+             | Suc   Term
+             | R     Term Term Term
+             | Nill
+             | Con   Term Term
+             | RL    Term Term Term
           deriving (Show, Eq)
 
   -- Valores
   data Value = VLam Type Term
              | VNum Int
-             | VUnit 
+             | VUnit
+             | VL ValueList
+
+  data ValueList = VNil
+             | VCons Value ValueList
 
   -- Contextos del tipado
   type Context = [Type]
