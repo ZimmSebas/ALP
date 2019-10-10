@@ -678,16 +678,16 @@ lexer cont s = case s of
                     ('=':cs) -> cont TEquals cs
                     unknown -> \line -> Failed $ "Línea "++(show line)++": No se puede reconocer "++(show $ take 10 unknown)++ "..."
                     where lexVar cs = case span isAlpha cs of
-                                           ("B",rest)    -> cont TType rest
-                                           ("LN",rest)   -> cont TLNat rest
-                                           ("Nat",rest)  -> cont TNat rest
-                                           ("def",rest)  -> cont TDef rest
-                                           ("rec",rest)  -> cont TRec rest
-                                           ("suc",rest)  -> cont TSucc rest
-                                           ("cons",rest) -> cont TCons rest
-                                           ("lrec",rest) -> cont TRecl rest
-                                           ("nil",rest)  -> cont TNil rest
-                                           (var,rest)    -> cont (TVar var) rest
+                                           ("B",rest)      -> cont TType rest
+                                           ("LNat",rest)   -> cont TLNat rest
+                                           ("Nat",rest)    -> cont TNat rest
+                                           ("def",rest)    -> cont TDef rest
+                                           ("rec",rest)    -> cont TRec rest
+                                           ("suc",rest)    -> cont TSucc rest
+                                           ("cons",rest)   -> cont TCons rest
+                                           ("recl",rest)   -> cont TRecl rest
+                                           ("nil",rest)    -> cont TNil rest
+                                           (var,rest)      -> cont (TVar var) rest
                           lexNat cs = let (n,rest) = span isDigit cs
                                       in  cont (TNum (read(n)::Int)) rest
                           consumirBK anidado cl cont s = case s of

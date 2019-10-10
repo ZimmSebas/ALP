@@ -37,17 +37,20 @@ pp ii vs (R t1 t2 t3)    = sep [text "rec",
                              parensIf (isAny t3) (pp ii vs t3)]
 pp ii vs (Num n)         = text $ show n
 pp ii vs (Nill)          = text "[]"
-pp ii vs (Con x xs)      = text "[" <>
-                           pp' ii vs (Con x xs) <>
-                           text "]"
+pp ii vs (Con x xs)      = pp' ii vs (Con x xs) 
 pp ii vs (RL t1 t2 t3)   = sep [text "recl",
                              parensIf (isAny t1) (pp ii vs t1),
                              parensIf (isAny t2) (pp ii vs t2),
                              parensIf (isAny t3) (pp ii vs t3)]
 
-pp' ii vs (Nill)         = text ""
-pp' ii vs (Con x Nill)   = text $ show x
-pp' ii vs (Con x xs)     = text (show x) <> text "," <> (pp' ii vs xs)
+pp' ii vs (Nill)         = text "[]"
+pp' ii vs (Con x Nill)   = pp ii vs x <> text ":[]" 
+pp' ii vs (Con x xs)     = case xs of
+        Con y ys -> pp ii vs x <> text ":" <> (pp' ii vs xs)
+        t        -> pp ii vs x <> text ":" <> pp ii vs t
+
+--trimNum (Num x) = show x
+--trimNum t       = pp ii vs t
 
 isAny :: Term -> Bool
 isAny t = isLam t || isApp t || isRec t || isSuc t 

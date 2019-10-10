@@ -1,0 +1,4 @@
+def add = \x:Nat. \y:Nat. rec x (\r:Nat. \p:Nat. suc r ) y
+def sum = \xs:LNat. recl 0 (\x:Nat. \ys:LNat . \r:Nat . add x r) xs
+
+def concat = \xs:LNat. \ys:LNat. recl ys (\y:Nat. \zs:LNat. \r:LNat. cons y r) xs

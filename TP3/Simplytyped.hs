@@ -54,6 +54,9 @@ eval e (Lam _ u :@: Lam s v) = eval e (sub 0 (Lam s v) u)
 eval e (Lam t u :@: v)       = case eval e v of
                  VLam t' u' -> eval e (Lam t u :@: Lam t' u')
                  VNum n     -> eval e (sub 0 (Num n) u)
+                 VL xs      -> case xs of 
+                        VNil       -> eval e (sub 0 Nill u)
+                        VCons x xs -> eval e (sub 0 (Con (quote x) (quote $ VL xs)) u)
                  _          -> error "Error de tipo en run-time, verificar type checker"
 eval e (u :@: v)             = case eval e u of
                  VLam t u' -> eval e (Lam t u' :@: v)
@@ -117,12 +120,19 @@ matchError t1 t2 = err $ "se esperaba " ++
                          render (printType t2) ++
                          " fue inferido."
 
-funmatchError :: Type -> Type -> Either String Type
-funmatchError t1 t2 = err $ "se esperaba " ++
-                         render (printType (Fun t1 (Fun Nat t1))) ++
-                         ", pero " ++
-                         render (printType t2) ++
-                         " fue inferido."
+rmatchError :: Type -> Type -> Either String Type
+rmatchError t1 t2 = err $ "se esperaba " ++
+                          render (printType (Fun t1 (Fun Nat t1))) ++
+                          ", pero " ++
+                          render (printType t2) ++
+                          " fue inferido."
+
+rlmatchError :: Type -> Type -> Either String Type
+rlmatchError t1 t2 = err $ "se esperaba " ++
+                           render (printType (Fun Nat (Fun ListNat (Fun t1 t1)))) ++
+                           ", pero " ++
+                           render (printType t2) ++
+                           " fue inferido."
 
 notfunError :: Type -> Either String Type
 notfunError t1 = err $ render (printType t1) ++ " no puede ser aplicado."
@@ -131,33 +141,62 @@ notfoundError :: Name -> Either String Type
 notfoundError n = err $ show n ++ " no está definida."
 
 infer' :: Context -> NameEnv Value Type -> Term -> Either String Type
-infer' c _ (Bound i) = ret (c !! i)
-infer' _ e (Free n) = case lookup n e of
-                        Nothing -> notfoundError n
-                        Just (_,t) -> ret t
-infer' c e (t :@: u) = infer' c e t >>= \tt -> 
-                       infer' c e u >>= \tu ->
-                       case tt of
-                         Fun t1 t2 -> if (tu == t1) 
-                                        then ret t2
-                                        else matchError t1 tu
-                         _         -> notfunError tt
-infer' c e (Lam t u) = infer' (t:c) e u >>= \tu ->
-                       ret $ Fun t tu
-infer' c e (Num n)   = Right Nat
-infer' c e (Suc t)   = infer' c e t >>= \tt ->
-                       case tt of
-                         Nat -> ret Nat
-                         t1  -> matchError Nat t1
-infer' c e (R t1 t2 t3) = infer' c e t1 >>= \tt1 -> 
-                          infer' c e t2 >>= \tt2 ->
-                          infer' c e t3 >>= \tt3 ->
-                          case tt2 of
-                            Fun t (Fun Nat t') -> 
-                              if (tt1 /= t || tt1 /= t')
-                                then funmatchError tt1 tt2
-                                else if (tt3 /= Nat) 
-                                  then matchError Nat tt3
+infer' c _ (Bound i)     = ret (c !! i)
+infer' _ e (Free n)      = case lookup n e of
+                             Nothing -> notfoundError n
+                             Just (_,t) -> ret t
+infer' c e (t :@: u)     = infer' c e t >>= \tt -> 
+                           infer' c e u >>= \tu ->
+                           case tt of
+                             Fun t1 t2 -> if (tu == t1) 
+                                         then ret t2
+                                         else matchError t1 tu
+                             _         -> notfunError tt
+infer' c e (Lam t u)     = infer' (t:c) e u >>= \tu ->
+                           ret $ Fun t tu
+infer' c e (Num n)       = Right Nat
+infer' c e (Suc t)       = infer' c e t >>= \tt ->
+                           case tt of
+                             Nat -> ret Nat
+                             t1  -> matchError Nat t1
+infer' c e (Nill)        = Right ListNat
+infer' c e (Con t1 t2)   = infer' c e t1 >>= \tt1 ->
+                           infer' c e t2 >>= \tt2 ->
+                           case tt1 of 
+                             Nat -> if (tt2 == ListNat)
+                                    then ret tt2
+                                    else matchError ListNat tt2
+                             _   -> matchError Nat tt1
+infer' c e (R t1 t2 t3)  = infer' c e t1 >>= \tt1 -> 
+                           infer' c e t2 >>= \tt2 ->
+                           infer' c e t3 >>= \tt3 ->
+                           case tt2 of
+                             Fun t (Fun Nat t') -> 
+                               if (tt1 /= t || tt1 /= t')
+                               then rmatchError tt1 tt2
+                               else if (tt3 /= Nat) 
+                                 then matchError Nat tt3
+                                 else ret t
+                             Fun _ _            -> rmatchError tt1 tt2
+                             _                  -> notfunError tt2
+infer' c e (RL t1 t2 t3) = infer' c e t1 >>= \tt1 ->
+                           infer' c e t2 >>= \tt2 -> 
+                           infer' c e t3 >>= \tt3 ->
+                           case tt2 of 
+                           Fun Nat (Fun ListNat (Fun t t')) -> 
+                             if (tt1 /= t || tt1 /= t')
+                             then rlmatchError tt1 tt2
+                             else if (tt3 /= ListNat)
+                                  then matchError ListNat tt3
                                   else ret t
-                            Fun t errtype     -> funmatchError tt1 tt2
-                            _                 -> notfunError tt2
+                           Fun _ _  -> rlmatchError tt1 tt2
+                           _        -> notfunError tt2
+
+
+
+
+
+
+
+
+
