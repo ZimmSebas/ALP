@@ -1,0 +1,7 @@
+x = 5;
+res = 1;
+while (x > 1) {
+	res = res / x;
+	x = x - 1 };
+if (res == x) {res = res + 1} else {res = res * 2}
+

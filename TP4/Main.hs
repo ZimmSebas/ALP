@@ -14,7 +14,7 @@ import System.IO.Error
 
 
 -- Modificar este import para usar diferentes evaluadores
-import Eval1
+import Eval3
 ---------------------------------------------------------
 
 main :: IO ()

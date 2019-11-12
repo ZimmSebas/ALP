@@ -35,13 +35,13 @@ class Monad m => MonadError m where
     throw :: m a
 
 instance Monad StateError where
-	return x      = StateError (\s -> Just (x, s))
-	m >>= f = StateError (\s -> case (runStateError m s) of
-	                                Nothing -> Nothing
-	                                Just (v, s') -> runStateError (f v) s')
+    return x = StateError (\s -> Just (x, s))
+    m >>= f  = StateError (\s -> case (runStateError m s) of
+                                     Nothing -> Nothing
+                                     Just (v, s') -> runStateError (f v) s')
 
 instance MonadError StateError where
-	throw = StateError (\s -> Nothing)
+    throw = StateError (\s -> Nothing)
 
 instance MonadState StateError where
     lookfor v = StateError (\s -> case (lookfor' v s) of
@@ -57,16 +57,70 @@ instance MonadState StateError where
 
 -- Evalua un programa en el estado nulo
 eval :: Comm -> Maybe Env
-eval = undefined
+eval p = case (runStateError (evalComm p) initState) of
+    Nothing -> Nothing
+    Just e  -> Just $ snd e
 
 -- Evalua un comando en un estado dado
 evalComm :: (MonadState m, MonadError m) => Comm -> m ()
-evalComm = undefined
+evalComm Skip                 = return ()
+evalComm (Let v e)            = do m <- evalIntExp e 
+                                   update v m
+evalComm (Seq c1 c2)          = do evalComm c1
+                                   evalComm c2
+evalComm (IfThenElse e c1 c2) = do b <- evalBoolExp e
+                                   if b then evalComm c1
+                                        else evalComm c2
+evalComm (While e c1)         = do b <- evalBoolExp e
+                                   if b then (do { evalComm c1 ; evalComm (While e c1) })
+                                        else (return ())
 
 -- Evalua una expresion entera en un estado dado
 evalIntExp :: (MonadState m, MonadError m) => IntExp -> m Int
-evalIntExp = undefined
-
+evalIntExp (Const n)     = return n
+evalIntExp (Var v)       = lookfor v
+evalIntExp (UMinus e)    = evalIntExp e >>= return . (*(-1))
+evalIntExp (Plus x y)    = do n <- evalIntExp x
+                              m <- evalIntExp y
+                              return (n + m)
+evalIntExp (Minus x y)   = do n <- evalIntExp x
+                              m <- evalIntExp y
+                              return (n - m)
+evalIntExp (Times x y)   = do n <- evalIntExp x
+                              m <- evalIntExp y
+                              return (n * m)
+evalIntExp (Div x y)     = do n <- evalIntExp x
+                              m <- evalIntExp y
+                              if m == 0 then throw
+                                        else return (n `div` m) 
+                              return (n `div` m)
+evalIntExp (Ass v e)     = do m <- evalIntExp e 
+                              update v m
+                              return m
+evalIntExp (SeqIE e1 e2) = do evalIntExp e1
+                              evalIntExp e2                       
+ 
 -- Evalua una expresion booleana en un estado dado
 evalBoolExp :: (MonadState m, MonadError m) => BoolExp -> m Bool
-evalBoolExp = undefined
+evalBoolExp BTrue     = return True
+evalBoolExp BFalse    = return False
+evalBoolExp (Eq p q)  = do x <- evalIntExp p
+                           y <- evalIntExp q
+                           return (x == y)
+evalBoolExp (NEq p q) = do x <- evalIntExp p
+                           y <- evalIntExp q
+                           return (x /= y)
+evalBoolExp (Lt p q)  = do x <- evalIntExp p
+                           y <- evalIntExp q
+                           return (x < y)
+evalBoolExp (Gt p q)  = do x <- evalIntExp p
+                           y <- evalIntExp q
+                           return (x > y)
+evalBoolExp (And p q) = do x <- evalBoolExp p
+                           y <- evalBoolExp q
+                           return (x && y)
+evalBoolExp (Or p q)  = do x <- evalBoolExp p
+                           y <- evalBoolExp q
+                           return (x || y)
+evalBoolExp (Not p)   = do x <- evalBoolExp p
+                           return (not x)
